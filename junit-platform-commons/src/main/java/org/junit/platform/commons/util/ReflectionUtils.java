@@ -378,6 +378,74 @@ public final class ReflectionUtils {
 	}
 
 	/**
+	 * Determine if the current Java runtime supports the Java Platform Module System.
+	 *
+	 * @return {@code true} if the Java Platform Module System is available, otherwise {@code false}
+	 */
+	public static boolean isJavaPlatformModuleSystemAvailable() {
+		try {
+			Class.forName("java.lang.Module");
+			return true;
+		}
+		catch (ClassNotFoundException expected) {
+			return false;
+		}
+	}
+
+	/**
+	 * Chain-call named methods starting on the passed-in root object.
+	 *
+	 * <p>Each method is invoked on the return value of the previous method invocation.
+	 *
+	 * @param defaultValue this value is returned if any {@link JUnitException} is caught
+	 * @param root the initial instance to invoke the first method on; never {@code null}
+	 * @param names the method names to invoke; never {@code null}
+	 * @return the return value of the last method call
+	 */
+	@SuppressWarnings("unchecked")
+	public static <V> V eval(V defaultValue, Object root, String... names) {
+		try {
+			return (V) eval(root, names);
+		}
+		catch (JUnitException e) {
+			return defaultValue;
+		}
+	}
+
+	/**
+	 * Chain-call named methods starting on the passed-in root object.
+	 *
+	 * <p>Each method is invoked on the return value of the previous method invocation.
+	 *
+	 * @param root the initial instance to invoke the first method on; never {@code null}
+	 * @param names the method names to invoke; never {@code null}
+	 * @return the return value of the last method call
+	 * @throws JUnitException if any intermediate return value is {@code null} or a
+	 * {@link ReflectiveOperationException} is caught
+	 */
+	public static Object eval(Object root, String... names) {
+		Preconditions.notNull(root, "Root object must not be null");
+		Preconditions.notEmpty(names, "names array must not be null or empty");
+		Preconditions.containsNoNullElements(names, "individual names must not be null");
+		Object object = root;
+		for (String name : names) {
+			try {
+				if (object == null) {
+					throw new JUnitException(String.format("Can not eval method [%s] on null", name));
+				}
+				object = object.getClass().getMethod(name).invoke(object);
+			}
+			catch (ReflectiveOperationException e) {
+				throw new JUnitException(
+					String.format("Failed to find or invoke method named [%s] in class [%s] for [%s] with root = [%s]",
+						name, object.getClass(), object, root),
+					e);
+			}
+		}
+		return object;
+	}
+
+	/**
 	 * @see org.junit.platform.commons.support.ReflectionSupport#invokeMethod(Method, Object, Object...)
 	 */
 	public static Object invokeMethod(Method method, Object target, Object... args) {

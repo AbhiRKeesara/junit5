@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.platform.commons.util.ReflectionUtils.HierarchyTraversalMode.BOTTOM_UP;
 import static org.junit.platform.commons.util.ReflectionUtils.HierarchyTraversalMode.TOP_DOWN;
 import static org.junit.platform.commons.util.ReflectionUtils.findMethod;
@@ -1002,6 +1003,31 @@ class ReflectionUtilsTests {
 		for (Method method : PublicClass.class.getMethods()) {
 			assertFalse(ReflectionUtils.isGeneric(method));
 		}
+	}
+
+	@Test
+	void testIsJavaPlatformModuleSystemAvailable() {
+		boolean expected;
+		try {
+			Class.forName("java.lang.Module");
+			expected = true;
+		}
+		catch (ClassNotFoundException e) {
+			expected = false;
+		}
+		assertEquals(expected, ReflectionUtils.isJavaPlatformModuleSystemAvailable());
+	}
+
+	@Test
+	void eval() {
+		assertEquals(getClass().getSimpleName(), ReflectionUtils.eval(this, "getClass", "getSimpleName"));
+	}
+
+	@Test
+	void evalWithJavaPlatformModuleSystemAvailable() {
+		assumeTrue(ReflectionUtils.isJavaPlatformModuleSystemAvailable());
+		assertEquals("java.base", ReflectionUtils.eval(Class.class, "getModule", "getName"));
+		assertEquals("java.base", ReflectionUtils.eval(9, "getClass", "getModule", "getName"));
 	}
 
 	private static void createDirectories(Path... paths) throws IOException {
